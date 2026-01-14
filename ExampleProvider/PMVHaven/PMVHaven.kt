@@ -59,3 +59,49 @@ class PMVHaven : MainAPI() {
         val doc = app.get(url).document
 
         val title = doc.selectFirst("h1")?.text() ?: "PMV Video"
+return newMovieLoadResponse(
+            title,
+            url,
+            TvType.NSFW,
+            url
+        ) {
+            this.posterUrl = fixUrlNull(poster)
+        }
+    }
+
+    override fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+
+        val doc = app.get(data).document
+
+        // Try iframe embeds
+        doc.select("iframe").forEach { iframe ->
+            val src = iframe.attr("src")
+            if (src.isNotBlank()) {
+                loadExtractor(src, data, callback)
+            }
+        }
+
+        // Try direct video sources (fallback)
+        doc.select("video source").forEach { source ->
+            val videoUrl = source.attr("src")
+            if (videoUrl.isNotBlank()) {
+                callback(
+                    ExtractorLink(
+                        name,
+                        name,
+                        fixUrl(videoUrl),
+                        data,
+                        Qualities.Unknown.value
+                    )
+                )
+            }
+        }
+
+        return true
+    }
+}
